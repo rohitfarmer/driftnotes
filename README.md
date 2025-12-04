@@ -33,13 +33,13 @@ journal-root
             2024-10.md
             2024-09.md
     driftnotes          # Cloned or downloaded driftnotes repo with it's contents.
-    config.yaml         # Configuration file with site title, URL etc.
+    config.yml         # Configuration file with site title, URL etc.
     _site               # Output directory as mentioned in the configuration file.
 ```
 
 ### Configuration YAML File
 
-Create a `config.yaml` YAML file with the contents as mentioned below (modify for your project) and place it in the project root folder. All paths mentioned in the configuration file are relative to it.
+Create a `config.yml` YAML file with the contents as mentioned below (modify for your project) and place it in the project root folder. All paths mentioned in the configuration file are relative to it.
 
 ```yaml
 site_title: "Rohit's Journal"
@@ -146,3 +146,135 @@ Rules:
   ```
 
   So the alt text becomes a visible caption.
+
+## Building the Journal Website
+
+From the project root folder:
+
+```bash
+python3 diffnet/build.py config.yml
+```
+
+What happens:
+
+1. Reads `config.yml`.
+2. Walks `content_root` and scans year folders.
+3. Parses each `YYYY-MM.md`, splitting into entries by `## YYYY-MM-DD` headings.
+4. Extracts `tags:` and `draft:` metadata.
+5. Groups entries by year, sorts by date (order from config).
+6. Builds:
+
+   * year pages
+   * `index.html`
+   * `rss.xml`
+   * `on-this-day.html`
+   * `tag/<slug>.html` pages
+   * `tags.html`
+   * `search_index.json`
+7. Copies:
+
+   * `style.css` → `_site/style.css`
+   * `lunr.js` → `_site/lunr.js`
+   * `search.js` → `_site/search.js`
+8. Writes `_site/theme.js`.
+
+To preview locally:
+
+```bash
+cd _site
+python3 -m http.server 8000
+```
+
+Open: [http://localhost:8000](http://localhost:8000)
+
+## Common Gotchas/Things to Remember
+
+* **Dates must be in `YYYY-MM-DD`** in the heading, e.g. `## 2025-12-02`.
+* Metadata (`tags:`, `draft:`) must be **above the first blank line** of an entry.
+* Drafts are skipped unless `include_drafts: true` in `config.yml`.
+* Tag slugs are auto-generated (`My Tag` → `my-tag`).
+* `_site/` is generated; don’t manually edit files inside – they’ll be overwritten on the next build.
+* Always run `python3 driftnotes/build.py` after editing:
+
+  * Markdown content
+  * `config.yml`
+  * `style.css`
+  * `search.js`
+  * `build.py` itself
+
+
+## TL;DR
+
+### Generated Pages
+
+Running the build creates:
+
+* `_site/index.html` – latest year’s entries
+* `_site/YYYY.html` – one per year
+* `_site/on-this-day.html` – entries that match today’s month-day across years
+* `_site/tags.html` – tag index page
+* `_site/tag/<slug>.html` – one page per tag
+* `_site/rss.xml` – RSS feed for latest year
+* `_site/search_index.json` – JSON search index for Lunr
+* `_site/style.css` – copy of your CSS
+* `_site/lunr.js`, `_site/search.js` – JS files copied over
+* `_site/theme.js` – auto-generated JS for dark mode persistence
+
+#### Year pages / index
+
+* Show entries for that year in chronological or reverse-chronological order (from `order` in config).
+* Include:
+
+  * **Search box** (unless `enable_search: false`)
+  * **Dark mode toggle**
+  * **Sidebar**:
+
+    * Site title + tagline
+    * Links: “On this day”, “Tags”
+    * List of years (latest first)
+  * Each entry has:
+
+    * Date heading
+    * Permalink (`¶`) linking to `#YYYY-MM-DD`
+    * Tag pills
+
+#### Tag pages
+
+* URL: `_site/tag/<slug>.html`
+
+  * e.g. tag `outdoors` → `_site/tag/outdoors.html`
+* Lists **all entries** across all years with that tag, newest first.
+* Sidebar is consistent (On this day, Tags, year list).
+* No search box (to keep things simple and avoid path issues).
+* Tag pills on these pages are **non-clickable** (just visual).
+
+#### Tag index (`tags.html`)
+
+* URL: `_site/tags.html`
+
+* Shows all tags, with entry counts:
+
+  ```text
+  outdoors (5)
+  family (12)
+  coding (9)
+  ```
+
+* Each tag links to its tag page: `tag/<slug>.html`.
+
+#### On This Day
+
+* URL: `_site/on-this-day.html`
+* Uses the current system date when you run the build.
+* Lists all entries across years where the date’s month-day matches today.
+* No search box.
+
+#### RSS feed
+
+* URL: `_site/rss.xml`
+* Contains items for the **latest year**.
+* Each item has:
+
+  * title (`YYYY-MM-DD – Site Title`)
+  * link to `YYYY.html#YYYY-MM-DD`
+  * `description` with the rendered HTML body (wrapped in CDATA).
