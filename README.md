@@ -21,7 +21,7 @@ pip install markdown pyyaml beautifulsoup4
 
 ### Directory Structure
 
-A typical DrifNotes journal project consists of a `journal-root` folder that contains the `contents` to be published, a configuration `YAML` file, and the downloaded or cloned `drifnotes` repository. Upon execution of the build command below, the build system will generate an output directory (specified in the configuration file) with the HTML files. 
+A typical DrifNotes journal project consists of a `journal-root` folder that contains the `contents` to be published, a configuration `YAML` file, and the downloaded or cloned `driftnotes` repository **(this repository)**. Upon execution of the [build command](#building-the-journal-website), the build system will generate an output directory (specified in the configuration file) with the HTML files. 
 
 ```bash
 journal-root
@@ -68,9 +68,9 @@ extra_footer: |
     <p><a href="mailto:rohit@rohitfarmer.com">Contact</a></p>
 ```
 
-## 4. Journal content format
+## Journal Content Format
 
-### 4.1. Files and folders
+### Files and Folders
 
 Each year gets its own folder:
 
