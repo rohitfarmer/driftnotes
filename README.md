@@ -4,7 +4,7 @@ DriftNotes is a minimal static site generator for short-form, everyday journalin
 
 See DriftNotes being used live at: [https://journal.rohitfarmer.com/](https://journal.rohitfarmer.com/).
 
-For comments and collaboration please contact: [mailto:rohit@rohitfarmer.com](rohit@rohitfarmer.com)
+For comments and collaboration please contact: [rohit@rohitfarmer.com](mailto:rohit@rohitfarmer.com).
 
 ## Getting Started
 
