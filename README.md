@@ -4,6 +4,8 @@ DriftNotes is a minimal static site generator for short-form, everyday journalin
 
 See DriftNotes being used live at: [https://journal.rohitfarmer.com/](https://journal.rohitfarmer.com/).
 
+For comments and collaboration please contact: [mailto:rohit@rohitfarmer.com](rohit@rohitfarmer.com)
+
 ## Getting Started
 
 ## Dependencies
@@ -278,3 +280,5 @@ Running the build creates:
   * title (`YYYY-MM-DD – Site Title`)
   * link to `YYYY.html#YYYY-MM-DD`
   * `description` with the rendered HTML body (wrapped in CDATA).
+
+
