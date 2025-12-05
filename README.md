@@ -1,5 +1,11 @@
 # DriftNotes: A lightweight journaling engine for thoughts that drift between tweets and blogs.
 
+<p align="center">
+  <img src="https://rohitfarmer.com/posts/2025/driftnotes/journal-screenshot.webp" width="60%"><br>
+  <em>Screenshot of a DriftNotes Website as of December 5, 2025.</em>
+</p>
+
+
 DriftNotes is a minimal static site generator for short-form, everyday journaling. Write Markdown entries grouped by year and month, and DriftNotes compiles them into clean, fast, fully static HTML—complete with tags, permalinks, dark mode, on-this-day pages, and offline search. Perfect for writing posts that are more meaningful than a tweet but less formal than a full blog post.
 
 See DriftNotes being used live at: [https://journal.rohitfarmer.com/](https://journal.rohitfarmer.com/).
