@@ -282,7 +282,9 @@ def wrap_images_with_figures(html_fragment: str) -> str:
     return str(soup)
 
 
-def render_entry(entry, *, link_tags: bool = True, permalink_href: str | None = None):
+#def render_entry(entry, *, link_tags: bool = True, permalink_href: str | None = None):
+def render_entry(entry, *, link_tags: bool = True, permalink_href=None):
+
     """
     Render a single <article> with date, permalink, and tag pills.
 
