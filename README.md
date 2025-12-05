@@ -214,6 +214,8 @@ Running the build creates:
 * `_site/index.html` – latest year’s entries
 * `_site/YYYY.html` – one per year
 * `_site/on-this-day.html` – entries that match today’s month-day across years
+* `_site/on_this_day_index.json` - JSON index for on_this_page.js
+* `_site/on-this-day.js` - JS file copied over
 * `_site/tags.html` – tag index page
 * `_site/tag/<slug>.html` – one page per tag
 * `_site/rss.xml` – RSS feed for latest year
