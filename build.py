@@ -282,9 +282,13 @@ def wrap_images_with_figures(html_fragment: str) -> str:
     return str(soup)
 
 
-def render_entry(entry: dict, *, link_tags: bool = True) -> str:
+def render_entry(entry, *, link_tags: bool = True, permalink_href: str | None = None):
     """
     Render a single <article> with date, permalink, and tag pills.
+
+    permalink_href:
+      - None  => use "#YYYY-MM-DD" (default, like year pages)
+      - string => used as-is for the permalink href
     """
     date_str = entry["date"]
     level = max(2, min(6, entry.get("heading_level", 2)))
@@ -292,7 +296,11 @@ def render_entry(entry: dict, *, link_tags: bool = True) -> str:
 
     raw_html = markdown.markdown(entry["content_md"])
     content_html = wrap_images_with_figures(raw_html)
-    permalink = f"#{date_str}"
+
+    if permalink_href is None:
+        permalink = f"#{date_str}"
+    else:
+        permalink = permalink_href
 
     # tags
     tags = entry.get("tags") or []
@@ -323,6 +331,7 @@ def render_entry(entry: dict, *, link_tags: bool = True) -> str:
   </div>
 </article>
 """
+
 
 
 def sidebar_extra_links(prefix: str = "", active_on_this_day: bool = False) -> str:
@@ -479,12 +488,16 @@ def render_year_page(year: str, years: list, entries: list, cfg: dict, *, is_ind
 """
 
 
-def render_on_this_day_page(today_label: str, years: list, entries: list, cfg: dict) -> str:
+def render_on_this_day_page(years, cfg):
     """
-    On this day: no search box.
+    Render the *shell* for the On This Day page.
+
+    The actual date and entries are filled in by on-this-day.js
+    using on_this_day_index.json.
     """
     site_title = cfg["site_title"]
     site_tagline = cfg["site_tagline"]
+
     page_title = f"{site_title} – On this day"
 
     # Sidebar years
@@ -497,14 +510,9 @@ def render_on_this_day_page(today_label: str, years: list, entries: list, cfg: d
 
     extra_head_html, extra_footer_html = build_common_head_and_footer(cfg)
 
-    if entries:
-        articles_html = "\n\n".join(render_entry(e, link_tags=True) for e in entries)
-        subtitle = f"Entries from different years that happened on {today_label}."
-    else:
-        articles_html = "<p>No earlier entries for this date yet.</p>"
-        subtitle = f"No earlier entries found on {today_label}."
-
-    main_heading = f'<h2 class="year-title">On this day – {today_label}</h2>'
+    # Heading and containers that JS will fill
+    main_heading = '<h2 id="on-this-day-heading" class="year-title">On this day</h2>'
+    subtitle = '<p id="on-this-day-subtitle" class="content-subtitle">Loading entries for today…</p>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -546,21 +554,25 @@ def render_on_this_day_page(today_label: str, years: list, entries: list, cfg: d
     <div class="content-inner">
       <header class="content-header">
         {main_heading}
-        <p class="content-subtitle">{subtitle}</p>
+        {subtitle}
       </header>
 
-      {articles_html}
+      <div id="on-this-day-entries">
+        <p>Loading…</p>
+      </div>
     </div>
   </main>
 </div>
 
 <footer class="site-footer">
   {extra_footer_html}
-</footer>{theme_script_html(prefix="")}
+</footer>
+<script src="on-this-day.js"></script>{theme_script_html(prefix="")}
 
 </body>
 </html>
 """
+
 
 
 def render_tag_page(tag_name: str, tag_slug: str, years: list, entries: list, cfg: dict) -> str:
@@ -768,6 +780,14 @@ def copy_search_js(cfg: dict, output_dir: Path):
         shutil.copy2(src, dest)
         print(f"Copied {filename} to {dest}")
 
+def copy_on_this_day_js(output_dir: Path):
+    src = BASE_DIR / "on-this-day.js"
+    if not src.exists():
+        print(f"WARNING: on-this-day.js not found at {src}", file=sys.stderr)
+        return
+    dest = output_dir / "on-this-day.js"
+    shutil.copy2(src, dest)
+    print(f"Copied on-this-day.js to {dest}")
 
 def write_theme_js(output_dir: Path):
     """
@@ -895,28 +915,81 @@ def build_search_index(entries_by_year: dict, cfg: dict, output_dir: Path):
     index_path.write_text(json.dumps(docs, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote search index to {index_path}")
 
+def build_on_this_day_index(entries_by_year: dict, output_dir: Path):
+    """
+    Build a JSON index for the dynamic On This Day page.
+
+    Format:
+      {
+        "MM-DD": [
+          {
+            "date": "YYYY-MM-DD",
+            "year": "YYYY",
+            "url": "YYYY.html#YYYY-MM-DD",
+            "html": "<article>...</article>"
+          },
+          ...
+        ],
+        ...
+      }
+    """
+    index = {}
+
+    for year, entries in entries_by_year.items():
+        for e in entries:
+            dt = e["_dt"]
+            mm_dd = dt.strftime("%m-%d")
+            date_str = e["date"]
+            year_page = f"{year}.html"
+            url = f"{year_page}#{date_str}"
+
+            # Render the entry as HTML, but permalink points to the year page
+            html_snippet = render_entry(
+                e,
+                link_tags=True,
+                permalink_href=url,
+            )
+
+            item = {
+                "date": date_str,
+                "year": year,
+                "url": url,
+                "html": html_snippet,
+            }
+            index.setdefault(mm_dd, []).append(item)
+
+    # Sort each MM-DD bucket by most recent first (year/date descending)
+    for mm_dd, items in index.items():
+        items.sort(
+            key=lambda it: (int(it["year"]), it["date"]),
+            reverse=True,
+        )
+
+    out_path = output_dir / "on_this_day_index.json"
+    out_path.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Wrote {out_path}")
+
 
 def build_on_this_day(entries_by_year: dict, cfg: dict, output_dir: Path):
+    """
+    Build:
+      - on_this_day_index.json (all entries grouped by MM-DD)
+      - on-this-day.html shell, which JS will fill at runtime.
+    """
     if not entries_by_year:
         return
 
-    today = date.today()
-    mm_dd = today.strftime("%m-%d")
-    label = today.strftime("%B %d")
-
-    matches = []
-    for _, entries in entries_by_year.items():
-        for e in entries:
-            if e["_dt"].strftime("%m-%d") == mm_dd:
-                matches.append(e)
-
-    matches.sort(key=lambda x: x["_dt"], reverse=True)
     years = sorted(entries_by_year.keys())
 
-    html_page = render_on_this_day_page(label, years, matches, cfg)
+    # 1) JSON index for all days
+    build_on_this_day_index(entries_by_year, output_dir)
+
+    # 2) HTML shell page
+    html_page = render_on_this_day_page(years, cfg)
     out_path = output_dir / "on-this-day.html"
     out_path.write_text(html_page, encoding="utf-8")
     print(f"Wrote {out_path}")
+
 
 
 def build_tag_pages(tag_index: dict, entries_by_year: dict, cfg: dict, output_dir: Path):
@@ -981,6 +1054,8 @@ def main():
     copy_css(output_dir)
     copy_search_js(cfg, output_dir)
     write_theme_js(output_dir)
+    copy_on_this_day_js(output_dir)
+
 
     # 5. Year pages
     for year in years:
@@ -1012,7 +1087,9 @@ def main():
     generate_rss(latest_year, entries_by_year[latest_year], cfg, output_dir)
 
     # 8. On this day
+    # on-this-day (dynamic shell + JSON index)
     build_on_this_day(entries_by_year, cfg, output_dir)
+
 
     # 9. Tags: per-tag pages + tags.html
     build_tag_pages(tag_index, entries_by_year, cfg, output_dir)
