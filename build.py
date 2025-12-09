@@ -460,6 +460,20 @@ def render_year_page(year: str, years: list, entries: list, cfg: dict, *, is_ind
 
 {sidebar_extra_links(prefix="", active_on_this_day=False)}
 
+    <input type="checkbox"
+           id="year-toggle"
+           class="year-toggle-checkbox"
+           aria-label="Toggle year navigation">
+
+    <label for="year-toggle" class="year-toggle-label">
+      <span class="year-toggle-burger" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+      <span class="year-toggle-text">Browse years</span>
+    </label>
+
     <nav class="year-nav">
       <h2 class="year-nav-title">Years</h2>
       <ul class="year-nav-list">
@@ -543,6 +557,20 @@ def render_on_this_day_page(years, cfg):
     </div>
 
 {sidebar_extra_links(prefix="", active_on_this_day=True)}
+
+    <input type="checkbox"
+           id="year-toggle"
+           class="year-toggle-checkbox"
+           aria-label="Toggle year navigation">
+
+    <label for="year-toggle" class="year-toggle-label">
+      <span class="year-toggle-burger" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+      <span class="year-toggle-text">Browse years</span>
+    </label>
 
     <nav class="year-nav">
       <h2 class="year-nav-title">Years</h2>
@@ -631,6 +659,20 @@ def render_tag_page(tag_name: str, tag_slug: str, years: list, entries: list, cf
     </div>
 
 {sidebar_extra_links(prefix="../", active_on_this_day=False)}
+
+    <input type="checkbox"
+           id="year-toggle"
+           class="year-toggle-checkbox"
+           aria-label="Toggle year navigation">
+
+    <label for="year-toggle" class="year-toggle-label">
+      <span class="year-toggle-burger" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+      <span class="year-toggle-text">Browse years</span>
+    </label>
 
     <nav class="year-nav">
       <h2 class="year-nav-title">Years</h2>
@@ -725,6 +767,20 @@ def render_tag_index_page(tag_index: dict, years: list, cfg: dict) -> str:
     </div>
 
 {sidebar_extra_links(prefix="", active_on_this_day=False)}
+
+    <input type="checkbox"
+           id="year-toggle"
+           class="year-toggle-checkbox"
+           aria-label="Toggle year navigation">
+
+    <label for="year-toggle" class="year-toggle-label">
+      <span class="year-toggle-burger" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+      <span class="year-toggle-text">Browse years</span>
+    </label>
 
     <nav class="year-nav">
       <h2 class="year-nav-title">Years</h2>
