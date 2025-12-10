@@ -1,7 +1,7 @@
 # DriftNotes: A lightweight journaling engine for thoughts that drift between tweets and blogs.
 
 <p align="center">
-  <img src="https://files.mastodon.social/media_attachments/files/115/669/280/368/903/196/original/741e2dd469702fc1.webp" width="60%"><br>
+  <img src="https://files.mastodon.social/media_attachments/files/115/696/526/403/095/866/original/530022cce3534f2c.png" width="60%"><br>
   <em>Screenshot of a DriftNotes Website as of December 5, 2025.</em>
 </p>
 
