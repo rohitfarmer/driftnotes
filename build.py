@@ -325,7 +325,12 @@ def render_entry(entry, *, link_tags: bool = True, permalink_href=None):
     <{heading_tag} class="entry-date">
       <time datetime="{date_str}">{date_str}</time>
     </{heading_tag}>
-    <a class="entry-permalink" href="{permalink}" title="Permalink to this entry">¶</a>
+      <a class="entry-permalink"
+        href="{permalink}"
+        title="Copy link to this entry"
+        aria-label="Copy link to this entry">
+        🔗
+      </a>
     {tag_html}
   </header>
   <div class="entry-body">
@@ -351,6 +356,14 @@ def sidebar_extra_links(prefix: str = "", active_on_this_day: bool = False) -> s
       <a href="{prefix}tags.html" class="sidebar-link">Tags</a>
     </div>"""
 
+def copy_toast_html() -> str:
+    """
+    Small toast element shown when a permalink is copied.
+    """
+    return """
+    <div id="copy-toast" class="copy-toast" role="status" aria-live="polite">
+    Link copied to clipboard
+    </div>"""
 
 def build_common_head_and_footer(cfg: dict):
     extra_head_items = cfg.get("extra_head") or []
@@ -497,7 +510,8 @@ def render_year_page(year: str, years: list, entries: list, cfg: dict, *, is_ind
 
 <footer class="site-footer">
   {extra_footer_html}
-</footer>{search_scripts_html(cfg, prefix="")}{theme_script_html(prefix="")}
+</footer>
+{copy_toast_html()}{search_scripts_html(cfg, prefix="")}{theme_script_html(prefix="")}
 
 </body>
 </html>
@@ -597,12 +611,12 @@ def render_on_this_day_page(years, cfg):
 <footer class="site-footer">
   {extra_footer_html}
 </footer>
+{copy_toast_html()}
 <script src="on-this-day.js"></script>{theme_script_html(prefix="")}
 
 </body>
 </html>
 """
-
 
 
 def render_tag_page(tag_name: str, tag_slug: str, years: list, entries: list, cfg: dict) -> str:
@@ -696,11 +710,13 @@ def render_tag_page(tag_name: str, tag_slug: str, years: list, entries: list, cf
 
 <footer class="site-footer">
   {extra_footer_html}
-</footer>{theme_script_html(prefix="../")}
+</footer>
+{copy_toast_html()}{theme_script_html(prefix="../")}
 
 </body>
 </html>
 """
+
 
 
 def render_tag_index_page(tag_index: dict, years: list, cfg: dict) -> str:
@@ -804,7 +820,8 @@ def render_tag_index_page(tag_index: dict, years: list, cfg: dict) -> str:
 
 <footer class="site-footer">
   {extra_footer_html}
-</footer>{search_scripts_html(cfg, prefix="")}{theme_script_html(prefix="")}
+</footer>
+{copy_toast_html()}{search_scripts_html(cfg, prefix="")}{theme_script_html(prefix="")}
 
 </body>
 </html>
@@ -847,12 +864,14 @@ def copy_on_this_day_js(output_dir: Path):
     shutil.copy2(src, dest)
     print(f"Copied on-this-day.js to {dest}")
 
+
 def write_theme_js(output_dir: Path):
     """
-    Write theme.js (persistent dark mode) into the output dir.
+    Write theme.js (persistent dark mode + permalink share/copy) into the output dir.
     """
     js = r"""
 (function () {
+  // --- Dark mode toggle ---
   function initThemeToggle() {
     var toggle = document.getElementById('theme-toggle');
     if (!toggle) return;
@@ -869,10 +888,80 @@ def write_theme_js(output_dir: Path):
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initThemeToggle);
-  } else {
+  // --- Copy-to-clipboard helpers ---
+  function fallbackCopy(text) {
+    var textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+    } catch (e) {
+      // ignore
+    }
+    document.body.removeChild(textarea);
+  }
+
+  var copyToastTimeout = null;
+
+  function showCopyToast() {
+    var toast = document.getElementById('copy-toast');
+    if (!toast) return;
+
+    toast.classList.add('visible');
+    if (copyToastTimeout) {
+      clearTimeout(copyToastTimeout);
+    }
+    copyToastTimeout = setTimeout(function () {
+      toast.classList.remove('visible');
+    }, 2000);
+  }
+
+  function initShareLinks() {
+    document.addEventListener('click', function (event) {
+      var link = event.target.closest('.entry-permalink');
+      if (!link) return;
+
+      event.preventDefault();
+
+      var href = link.getAttribute('href') || '';
+      var url;
+      try {
+        url = new URL(href, window.location.href).toString();
+      } catch (e) {
+        url = window.location.href;
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(
+          function () {
+            showCopyToast();
+          },
+          function () {
+            fallbackCopy(url);
+            showCopyToast();
+          }
+        );
+      } else {
+        fallbackCopy(url);
+        showCopyToast();
+      }
+    });
+  }
+
+  // --- Init both features ---
+  function initAll() {
     initThemeToggle();
+    initShareLinks();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
   }
 })();
 """.strip() + "\n"
