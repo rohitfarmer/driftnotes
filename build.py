@@ -69,6 +69,23 @@ def load_config(config_path: Path) -> dict:
     else:
         extra_footer_list = []
 
+    extra_footer_items = data.get("extra_footer", [])
+    if isinstance(extra_footer_items, str):
+        extra_footer_list = [extra_footer_items]
+    elif isinstance(extra_footer_items, list):
+        extra_footer_list = [str(x) for x in extra_footer_items]
+    else:
+        extra_footer_list = []
+
+    # NEW: resources – list of files/paths to copy to output
+    resources_cfg = data.get("resources", [])
+    if isinstance(resources_cfg, str):
+        resources_list = [resources_cfg]
+    elif isinstance(resources_cfg, list):
+        resources_list = [str(x) for x in resources_cfg]
+    else:
+        resources_list = []
+
     cfg = {
         "site_title": data.get("site_title", "Journal"),
         "site_tagline": data.get("site_tagline", ""),
@@ -81,6 +98,9 @@ def load_config(config_path: Path) -> dict:
         "extra_footer": extra_footer_list,
         "enable_search": bool(data.get("enable_search", True)),
         "include_drafts": bool(data.get("include_drafts", False)),
+
+        # NEW
+        "resources": resources_list,
     }
     return cfg
 
@@ -864,6 +884,43 @@ def copy_on_this_day_js(output_dir: Path):
     shutil.copy2(src, dest)
     print(f"Copied on-this-day.js to {dest}")
 
+def copy_resources(cfg: dict, project_root: Path, content_root: Path, output_dir: Path):
+    """
+    Copy arbitrary resource files listed in config['resources'] into the output dir.
+
+    Each entry is treated as a *relative path*.
+    Search order for each resource:
+      1) project_root / resource
+      2) content_root / resource
+
+    If found, it is copied to output_dir / resource (creating parent dirs).
+    """
+    resources = cfg.get("resources") or []
+    if not resources:
+        return
+
+    for rel in resources:
+        rel_path = Path(rel)
+        # Try project root first (same dir as config.yml)
+        candidates = [
+            project_root / rel_path,
+            content_root / rel_path,
+        ]
+
+        src = None
+        for cand in candidates:
+            if cand.exists():
+                src = cand
+                break
+
+        if src is None:
+            print(f"WARNING: resource not found: {rel}", file=sys.stderr)
+            continue
+
+        dest = output_dir / rel_path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        print(f"Copied resource {src} -> {dest}")
 
 def write_theme_js(output_dir: Path):
     """
@@ -1202,6 +1259,7 @@ def main():
     copy_search_js(cfg, output_dir)
     write_theme_js(output_dir)
     copy_on_this_day_js(output_dir)
+    copy_resources(cfg, project_root, content_root, output_dir)
 
 
     # 5. Year pages
