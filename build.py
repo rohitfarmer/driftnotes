@@ -277,27 +277,98 @@ def build_tag_index(entries_by_year: dict):
 # HTML helpers
 # -----------------------
 
-def wrap_images_with_figures(html_fragment: str) -> str:
-    """
-    Wrap <img> with <figure class="entry-figure"><img> <figcaption>alt</figcaption></figure>
-    """
+def wrap_images_with_figures(html_fragment: str, gallery_id=None) -> str:
     soup = BeautifulSoup(html_fragment, "html.parser")
 
-    for img in soup.find_all("img"):
-        alt = img.get("alt", "").strip()
+    for img in list(soup.find_all("img")):
+        alt = (img.get("alt") or "").strip()
+        src = (img.get("src") or "").strip()
+        if not src:
+            continue
 
+        # Skip if already inside a figure
         if img.find_parent("figure"):
             continue
 
+        clean = src.split("?", 1)[0].split("#", 1)[0]
+        ext = clean.rsplit(".", 1)[-1].lower() if "." in clean else ""
+
+        parent_p = img.find_parent("p")
+
+        # Determine whether we should replace the whole paragraph
+        replace_p = False
+        if parent_p:
+            non_ws = []
+            for c in parent_p.contents:
+                # include tags, and non-empty text nodes
+                if getattr(c, "name", None) is not None:
+                    non_ws.append(c)
+                else:
+                    if str(c).strip():
+                        non_ws.append(c)
+            replace_p = (len(non_ws) == 1 and non_ws[0] == img)
+
+        # IMPORTANT: detach the img from the tree before doing replacements
+        # This prevents "replace a tag with its parent" / ancestry conflicts.
+        img.extract()
+
         figure = soup.new_tag("figure")
         figure["class"] = "entry-figure"
-        img.replace_with(figure)
-        figure.append(img)
+
+        if ext in ("mp4", "webm", "ogg"):
+            video = soup.new_tag("video")
+            video["class"] = "entry-video"
+            video["controls"] = True
+            video["playsinline"] = True
+            video["preload"] = "metadata"
+
+            source = soup.new_tag("source")
+            source["src"] = src
+            if ext == "mp4":
+                source["type"] = "video/mp4"
+            elif ext == "webm":
+                source["type"] = "video/webm"
+            elif ext == "ogg":
+                source["type"] = "video/ogg"
+
+            video.append(source)
+            figure.append(video)
+
+        elif ext == "gif":
+            # optional: treat GIF link as looping muted video (better performance than <img>)
+            video = soup.new_tag("video")
+            video["class"] = "entry-video"
+            video["autoplay"] = True
+            video["loop"] = True
+            video["muted"] = True
+            video["playsinline"] = True
+            video["preload"] = "metadata"
+
+            source = soup.new_tag("source")
+            source["src"] = src
+            video.append(source)
+            figure.append(video)
+
+        else:
+            # Put the original image back into the figure
+            figure.append(img)
 
         if alt:
-            caption = soup.new_tag("figcaption")
-            caption.string = alt
-            figure.append(caption)
+            cap = soup.new_tag("figcaption")
+            cap.string = alt
+            figure.append(cap)
+
+        # Replace either the <p> wrapper or (if not in a simple <p>) insert figure where img was.
+        if replace_p and parent_p:
+            parent_p.replace_with(figure)
+        else:
+            # If we extracted img, we no longer have its old position.
+            # Best fallback: append figure at the end (rare case in your journal)
+            # OR insert at parent_p position if it existed.
+            if parent_p:
+                parent_p.insert_after(figure)
+            else:
+                soup.append(figure)
 
     return str(soup)
 
@@ -317,7 +388,7 @@ def render_entry(entry, *, link_tags: bool = True, permalink_href=None):
     heading_tag = f"h{level}"
 
     raw_html = markdown.markdown(entry["content_md"])
-    content_html = wrap_images_with_figures(raw_html)
+    content_html = wrap_images_with_figures(raw_html, gallery_id=date_str)
 
     if permalink_href is None:
         permalink = f"#{date_str}"
